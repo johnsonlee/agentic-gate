@@ -1,0 +1,5 @@
+{
+  "name": "duplicate-template-literals-fixture",
+  "private": true,
+  "type": "module"
+}

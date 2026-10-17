@@ -1,0 +1,11 @@
+{
+  "name": "fixture-dev-engine",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "devDependencies": {
+    "fixture-dev-application": "workspace:*"
+  }
+}

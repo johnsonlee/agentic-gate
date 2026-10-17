@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "es",
+  "title": "ES Gate",
+  "description": "JavaScript and TypeScript architecture standards, rules, execution contracts, and project-wide policies.",
+  "generator": "typedoc",
+  "output": "build/docs"
+}

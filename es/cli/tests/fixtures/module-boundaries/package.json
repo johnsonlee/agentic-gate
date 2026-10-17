@@ -1,0 +1,12 @@
+{
+  "name": "module-boundaries-fixture",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./internal": "./src/feature/internal.ts",
+    "./jsx-view": "./src/jsx-view/index.jsx",
+    "./nested": "./src/feature/nested/index.ts",
+    "./tsx-view": "./src/tsx-view/index.tsx"
+  }
+}

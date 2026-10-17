@@ -1,0 +1,12 @@
+{
+  "name": "agentic-gate-es-runner-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "agentic-gate-cli"
+  },
+  "devDependencies": {
+    "agentic-gate-cli": "workspace:*"
+  }
+}

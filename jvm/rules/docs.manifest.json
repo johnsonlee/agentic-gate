@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "jvm-rules",
+  "title": "JVM Gate Rules",
+  "description": "Non-negotiable Java and Kotlin policies implemented with Android Lint and UAST.",
+  "generator": "dokka",
+  "output": "build/dokka/html"
+}

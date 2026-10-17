@@ -1,0 +1,9 @@
+{
+  "name": "agentic-gate-violations-fixture",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "devDependencies": {
+    "eslint": "10.13.0"
+  }
+}

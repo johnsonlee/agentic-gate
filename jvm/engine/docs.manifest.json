@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "jvm-engine",
+  "title": "JVM Gate Engine",
+  "description": "Android Lint execution, injected rule contracts, violations, and actionable feedback.",
+  "generator": "dokka",
+  "output": "build/dokka/html"
+}
