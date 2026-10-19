@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { agenticGateEslint } from "../../rules/dist/index.js";
+import { agenticGateEslint } from "agentic-gate-rules";
 import {
   GateDecisions,
   ruleIdFromName,

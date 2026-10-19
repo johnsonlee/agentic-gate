@@ -48,12 +48,12 @@ async function main(): Promise<void> {
     configFile: values.config
   });
   const output = values.format === OutputFormats.JSON ? formatJson(result) : formatHuman(result);
-  process.stdout.write(`${output}\n`);
+  process.stdout.write(output + "\n");
   process.exitCode = result.decision === GateDecisions.PASS ? 0 : 1;
 }
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`Agentic Gate failed: ${message}\n`);
+  process.stderr.write(`Agentic Gate failed: ${message}` + "\n");
   process.exitCode = EXECUTION_FAILURE_EXIT_CODE;
 });

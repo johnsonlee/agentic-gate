@@ -5,7 +5,7 @@ import com.android.tools.lint.checks.infrastructure.TestFiles.kotlin
 import com.android.tools.lint.checks.infrastructure.TestLintTask.lint
 import kotlin.test.Test
 
-class NoSilentCatchDetectorTest {
+class EmptyCatchDetectorTest {
     @Test
     fun `reports empty Java and Kotlin catch clauses`() {
         lint()
@@ -32,7 +32,7 @@ class NoSilentCatchDetectorTest {
                     """,
                 ).indented(),
             )
-            .issues(NoSilentCatchDetector.ISSUE)
+            .issues(EmptyCatchDetector.ISSUE)
             .run()
             .expectErrorCount(2)
     }
@@ -52,7 +52,7 @@ class NoSilentCatchDetectorTest {
                     """,
                 ).indented(),
             )
-            .issues(NoSilentCatchDetector.ISSUE)
+            .issues(EmptyCatchDetector.ISSUE)
             .run()
             .expectClean()
     }

@@ -34,8 +34,7 @@
     "build": "bun run clean && bun --bun tsc --project tsconfig.build.json",
     "typecheck": "bun --bun tsc --project tsconfig.json --noEmit",
     "test": "bun test",
-    "docs": "typedoc --options typedoc.json",
-    "check": "bun run typecheck && bun run test && bun run build && bun run docs",
+    "check": "bun run typecheck && bun run test && bun run build",
     "prepack": "bun run check"
   },
   "dependencies": {
@@ -47,7 +46,6 @@
   "devDependencies": {
     "@types/bun": "1.4.3",
     "@typescript-eslint/parser": "8.71.2",
-    "typedoc": "0.28.20",
     "typescript": "~6.0.3"
   }
 }

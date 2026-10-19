@@ -34,7 +34,7 @@ public abstract class AgenticGateTask : DefaultTask() {
             classDirectories = classDirectories.files,
             libraries = libraries.files,
         )
-        val result = AgenticGateEngine(::AgenticGateRules).check(request)
+        val result = AgenticGateEngine(::AgenticGateRuleRegistry).check(request)
         if (result.passed) {
             logger.lifecycle("Agentic Gate passed ${request.sourceFiles.size} JVM source files.")
             return

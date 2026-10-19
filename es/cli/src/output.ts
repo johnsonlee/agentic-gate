@@ -12,9 +12,11 @@ export function formatHuman(result: GateResult): string {
       ? `:${violation.location.start.line}:${violation.location.start.column}`
       : "";
     const visualization = violation.visualization
-      ? `\n\n\`\`\`${violation.visualization.format}\n${violation.visualization.source}\n\`\`\``
+      ? "\n\n```" + violation.visualization.format + "\n" +
+        violation.visualization.source + "\n```"
       : "";
-    return `${violation.location.file}${location} [${violation.check}] ${violation.message}\n  Fix: ${violation.remediation.instruction}${visualization}`;
+    return `${violation.location.file}${location} [${violation.check}] ${violation.message}` +
+      "\n  Fix: " + violation.remediation.instruction + visualization;
   });
   return [
     `BLOCK ${result.summary.total} violations (${result.summary.eslint} ESLint, ${result.summary.project} project)`,

@@ -2,7 +2,9 @@ import typescriptParser from "@typescript-eslint/parser";
 import {
   noConsecutivePushStringLiterals,
   noDuplicatedImports,
+  noEscapedNewlinesInTemplateLiterals,
   noHardcodedStringComparisons,
+  noJoinedStringLiterals,
   noMagicNumbers,
   noMisnamedConstantObjects,
   noUnchangedParameterForwarding,
@@ -52,6 +54,67 @@ ruleTester.run("no-duplicated-imports", noDuplicatedImports, {
   ]
 });
 
+ruleTester.run(
+  "no-escaped-newlines-in-template-literals",
+  noEscapedNewlinesInTemplateLiterals,
+  {
+    valid: [
+      "const value = `first\nsecond`;",
+      "const value = `first\\\\nsecond`;",
+      "const value = 'first\\nsecond';",
+      "const lines = text.split('\\n');",
+      "const leading = `\\nfirst`;",
+      "const trailing = `first\\n`;",
+      "const bounded = `\\nfirst\\n`;",
+      "const value = `first${separator}second`;",
+      "const value = String.raw`first\\nsecond`;",
+      "const value = custom`first\\u000Asecond`;"
+    ],
+    invalid: [
+      {
+        code: "const value = `first\\nsecond`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\n${middle}`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `${middle}\\nlast`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\r\\nsecond`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\x0Asecond`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\u000Dsecond`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\u{A}second`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\\nsecond`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `\\\nfirst`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      },
+      {
+        code: "const value = `first\\u2028second`;",
+        errors: [{ messageId: "ESCAPED_NEWLINE" }]
+      }
+    ]
+  }
+);
+
 ruleTester.run("no-hardcoded-string-comparisons", noHardcodedStringComparisons, {
   valid: [
     "const READY = 'ready'; if (status === READY) start();",
@@ -94,11 +157,45 @@ ruleTester.run("no-hardcoded-string-comparisons", noHardcodedStringComparisons, 
   ]
 });
 
+ruleTester.run("no-joined-string-literals", noJoinedStringLiterals, {
+  valid: [
+    "['only'].join('');",
+    "['prefix', value].join('');",
+    "['prefix', ...values].join('');",
+    "['prefix', , 'suffix'].join('');",
+    "['prefix', 'suffix'].join(separator);",
+    "values.join('');",
+    "['prefix', 'suffix'].join('', sideEffect());",
+    "['prefix', `suffix-${value}`].join('');"
+  ],
+  invalid: [
+    {
+      code: "['prefix', 'suffix'].join('');",
+      errors: [{ messageId: "JOINED_STRING_LITERALS" }]
+    },
+    {
+      code: "['prefix', 'suffix'].join();",
+      errors: [{ messageId: "JOINED_STRING_LITERALS" }]
+    },
+    {
+      code: "[`prefix`, `suffix`]['join']('-');",
+      errors: [{ messageId: "JOINED_STRING_LITERALS" }]
+    },
+    {
+      code: "(['prefix', 'suffix'] as const).join('');",
+      filename: "input.ts",
+      languageOptions: { parser: typescriptParser },
+      errors: [{ messageId: "JOINED_STRING_LITERALS" }]
+    }
+  ]
+});
+
 ruleTester.run("no-magic-numbers", noMagicNumbers, {
   valid: [
     "use(-1, 0, 1);",
+    "use(-1n, 0n, 1n);",
     "const NOT_FOUND = 404; request(NOT_FOUND);",
-    "values[2]; const RADIX = 10; parseInt(text, RADIX); const settings = { timeout: 5000 };",
+    "const RADIX = 10; parseInt(text, RADIX); const settings = { timeout: 5000 };",
     {
       code: "type Port = 8080; enum Status { Ready = 2 } const Settings = { TIMEOUT: 5000 } as const; class Limits { readonly MAX = 10; }",
       filename: "input.ts",
@@ -109,6 +206,7 @@ ruleTester.run("no-magic-numbers", noMagicNumbers, {
     { code: "sleep(5000);", errors: [{ messageId: "MAGIC_NUMBER" }] },
     { code: "parseInt(text, 10);", errors: [{ messageId: "MAGIC_NUMBER" }] },
     { code: "if (status === 404) fail();", errors: [{ messageId: "MAGIC_NUMBER" }] },
+    { code: "values[42];", errors: [{ messageId: "MAGIC_NUMBER" }] },
     { code: "let timeout = -42;", errors: [{ messageId: "MAGIC_NUMBER" }] },
     {
       code: "function retry(count: number = 3) { return count; }",
@@ -154,6 +252,18 @@ ruleTester.run("no-misnamed-constant-objects", noMisnamedConstantObjects, {
       filename: "input.ts",
       languageOptions: { parser: typescriptParser },
       errors: [{ messageId: "CONSTANT_OBJECT_NAME", column: 14 }]
+    },
+    {
+      code: "const FOO_BAR = { VALUE: 'value' } as const;",
+      filename: "input.ts",
+      languageOptions: { parser: typescriptParser },
+      errors: [{ messageId: "CONSTANT_OBJECT_NAME" }]
+    },
+    {
+      code: "const Foo_bar = { VALUE: 'value' } as const;",
+      filename: "input.ts",
+      languageOptions: { parser: typescriptParser },
+      errors: [{ messageId: "CONSTANT_OBJECT_NAME" }]
     },
     {
       code: "const GateConfigValues = { autoEntries: 'auto', 'error-check': 'error' } as const;",

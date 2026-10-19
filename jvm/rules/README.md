@@ -1,9 +1,5 @@
 # JVM Gate Rules
 
-`io.johnsonlee.agentic.gate:rules` contains the non-negotiable Android Lint/UAST policies injected into the JVM engine.
+`io.johnsonlee.agentic.gate:rules` contains the non-negotiable Java and Kotlin policies injected into the JVM engine. Each rule defines its ID, detection semantics, and remediation beside the implementation in KDoc; Dokka renders those source comments into the JVM Rules site in the generated developer portal.
 
-| Rule ID | Blocks | Actionable |
-| --- | --- | --- |
-| `AgenticGateSilentCatch` | An empty Java or Kotlin catch clause that provably discards an exception. | Handle the exception explicitly or rethrow it with relevant context. |
-
-Each rule defines its detection semantics beside the implementation in KDoc. `AgenticGateRules` is the registry consumed by the Gradle composition root; the engine never imports this project.
+`AgenticGateRuleRegistry` is consumed by the Gradle composition root, while `AgenticGateIssueRegistry` is loaded by Android lint tasks. The engine never imports this project.

@@ -236,6 +236,11 @@ function collectTemplateLiteralFragments(value: unknown): TemplateLiteralFragmen
     }
 
     const node = current as Node;
+    if (node.type === AstNodeTypes.TAGGED_TEMPLATE_EXPRESSION) {
+      visit(node.tag);
+      for (const expression of node.quasi.expressions ?? []) visit(expression);
+      return;
+    }
     if (node.type === AstNodeTypes.TEMPLATE_ELEMENT) {
       const fragment = node.value?.cooked ?? node.value?.raw;
       if (

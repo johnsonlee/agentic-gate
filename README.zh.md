@@ -54,10 +54,10 @@ flowchart LR
 
 Agentic Gate 基于各技术生态原生的分析与构建体系扩展，而不是另建一套平行工具链。
 
-| 技术生态 | 技术基础 | 集成方式 | 状态 |
-| --- | --- | --- | :---: |
-| JavaScript / TypeScript | ES CLI/runner + [ESLint](https://eslint.org/) 插件 | 编排项目配置的全部 ESLint 插件，并补充项目级跨文件分析。 | 🛠️ 进行中 |
-| Java / Kotlin | Android Lint + UAST | 提供自定义 lint rules 和 Gradle 插件，在编译完成后自动触发 Agentic Gate。 | 🛠️ 进行中 |
+| 技术生态 | 集成方式 | 状态 |
+| --- | --- | :---: |
+| JavaScript / TypeScript | 编排项目配置的全部 ESLint 插件，并补充项目级跨文件分析。 | 🛠️ 进行中 |
+| Java / Kotlin | 通过 Gradle 插件执行 JVM 质量规则，并在编译完成后自动触发 Agentic Gate。 | 🛠️ 进行中 |
 
 不同平台采用不同的集成方式，但遵循同一个约定：**检查、执行门禁、返回可执行的违规项**。
 
@@ -98,7 +98,9 @@ export default {
 
 `gate.config.ts` 只负责标识源码和公共入口，不允许配置 rule 行为、阈值、例外、严重级别或架构层次。能够通过配置协商结果的检查不是 hard gate。
 
-rules package 包含 10 条原生单文件规则、32 条不可协商的 Unicorn 检查，以及项目级的重复顶层 statement、重复 function、模块目录内重复常量、无后缀非目录 import、模块内部实现泄漏、重复模板字符串静态片段、未使用代码、模块依赖环、workspace package 边界、workspace binary 可用性和 workspace 依赖环策略。原生规则还会禁止 wildcard re-export，避免模块接口在无审查的情况下自动扩张。模块图与 workspace 图都必须保持为 DAG；发现依赖环时，violation 会附上实际解析出的 Mermaid flowchart。
+`eslint.targets` 选择传给 ESLint 的路径，`eslint.configFile` 可以显式指定一个 `eslint.config.*` 文件。`project.files` 可设为 `"eslint-input"` 或明确的源码 glob 数组；`project.entries` 可设为 `"auto"` 或明确的公共入口数组。未显式指定配置路径时，只允许发现一个 `gate.config.*` 文件。
+
+rules package 包含 12 条原生单文件规则、32 条不可协商的 Unicorn 检查，以及项目级的重复顶层 statement、重复 function、模块目录内重复常量、无后缀非目录 import、模块内部实现泄漏、重复模板字符串静态片段、未使用代码、模块依赖环、workspace package 边界、workspace binary 可用性和 workspace 依赖环策略。原生规则还会禁止 wildcard re-export，避免模块接口在无审查的情况下自动扩张。模块图与 workspace 图都必须保持为 DAG；发现依赖环时，violation 会附上实际解析出的 Mermaid flowchart。
 
 在 ES gate 中，具名源码文件本身就是单文件接口。相对引用具体文件时必须写出真实源码后缀；省略后缀的相对引用只表示目录模块。当 `index.{ts,tsx,js,jsx,mjs,cjs}` 为同目录中的其它实现文件或子模块提供接口时，该目录才构成模块。外部调用方引用模块目录；省略后缀的文件 import、显式引用 index、直接引用实现文件、穿透模块访问子模块，以及只有 index 的空壳目录都会构成违规。package exports 只能指向真正模块的 index。单文件 ESLint 检查统一放在 [`src/rules/unit`](es/rules/src/rules/unit/)，项目级检查统一放在 [`src/rules/global`](es/rules/src/rules/global/)，TypeDoc 直接将这些源码注释渲染为 ES gate 的开发文档站点。
 
@@ -109,7 +111,7 @@ JVM 实现采用相同的单向工程结构：
 ```mermaid
 flowchart TD
     GRADLE["io.johnsonlee.agentic.gate<br/>Gradle composition root"] --> RULES["rules<br/>具体策略"]
-    GRADLE --> ENGINE["engine<br/>Android Lint 执行流程"]
+    GRADLE --> ENGINE["engine<br/>分析与执行流程"]
     RULES --> ENGINE
 ```
 
@@ -121,7 +123,7 @@ plugins {
 }
 ```
 
-首条 `AgenticGateSilentCatch` rule 会阻止能够确定为空的 Java 与 Kotlin catch 子句。每个 violation 都包含源码范围与可执行的修复指引。Gradle 插件不提供 rule 参数或严重级别开关。
+JVM gate 目前会阻止空 catch 子句、完整 statement/function 重复、未使用的局部变量与本地可控参数、hardcoded 字符串比较、wildcard import、无法审查的字符串 literal 和 magic number。同一组规则会通过 standalone engine 检查 Java/Kotlin 工程，并通过 Android 原生 variant lint task 检查 Android 工程。每个 violation 都包含源码范围与可执行的修复指引。Gradle 插件不提供 rule 参数或严重级别开关。
 
 ## 仓库结构
 
@@ -132,12 +134,13 @@ plugins {
 │   ├── rules/                  # 原生 rules 与第三方 hard gates
 │   └── engine/                 # Contract、分析器与执行流程
 ├── jvm/
-│   ├── engine/                 # 基于 Android Lint 的 JVM lint 引擎
+│   ├── engine/                 # JVM 分析与执行流程
 │   ├── rules/                  # JVM 质量策略
 │   └── gradle/                 # Gradle composition root 与生命周期插件
 ├── examples/
-│   ├── es-runner/              # ES CLI 端到端示例
-│   └── android-gradle/         # Android + Gradle 端到端示例
+│   ├── es/                     # ES 端到端示例
+│   ├── java/                   # Gradle Java 示例
+│   └── android/                # Android 原生 lint 示例
 ├── docs/                       # 生成的聚合开发文档
 ├── tooling/
 │   └── docs.ts                 # 开发文档装配工具
@@ -159,7 +162,7 @@ plugins {
 
 ## 项目状态
 
-Agentic Gate 目前处于 **pre-alpha** 阶段。仓库已经包含 ES 项目 runner、内置 ESLint 与项目级检查、基于 Android Lint 的 JVM engine、首条 JVM rule，以及经过编译后门禁测试的 Gradle 插件。这些 package 尚未发布。在首个稳定版本发布前，API、配置方式和包坐标都可能发生变化。
+Agentic Gate 目前处于 **pre-alpha** 阶段。仓库已经包含 ES 项目 runner、内置 ESLint 与项目级检查、JVM gate engine 与 hard rules，以及经过 Java、Kotlin 和 Android 编译后门禁测试的 Gradle 插件。这些 package 尚未发布。在首个稳定版本发布前，API、配置方式和包坐标都可能发生变化。
 
 ## 开发
 
@@ -167,15 +170,20 @@ ES workspace 使用 [Bun](https://bun.sh/) 管理依赖、脚本、测试和构�
 
 ```sh
 bun install
+bun run build
+bun install --frozen-lockfile
+bun run gate:self
 bun run check
 bun run docs
 bun run check:unused
-bun run example:runner
+bun run example:es
+bun run example:java
+bun run example:android
 ```
 
 `bun run check` 会验证 ES CLI、ESLint 规则、多文件 runner fixture、构建产物 smoke test、JVM checks、Gradle TestKit fixture 和本地 Maven publications。`bun run check:unused` 只用于仓库自身维护，不是公开 CLI 接口。
 
-开发文档与定义它的实现放在一起。ES rules 工程使用 TSDoc 注释和 TypeDoc 生成 `es/rules/build/docs`，并通过 `docs.manifest.json` 将这个站点声明给根装配器。`bun run docs` 会生成所有已经实现的 gate 文档，并在 `docs/index.html` 创建统一入口，各个完整站点分别复制到 `docs/gates/` 下。
+开发文档与定义它的实现放在一起。仓库根目录的 TypeDoc 配置会渲染三个 ES 工程中的 TSDoc，并生成 `es/rules/build/docs`；`docs.manifest.json` 将这个 ES 站点声明给根装配器。`bun run docs` 会生成所有已经实现的 gate 文档，并在 `docs/index.html` 创建统一入口，各个完整站点分别复制到 `docs/gates/` 下。
 
 JVM 源码使用 KDoc，各 Gradle module 通过 Dokka 生成独立 HTML 站点，再用自己的 `docs.manifest.json` 注册输出目录。根装配器只消费静态站点，因此 Kotlin 文档无需耦合 TypeDoc 与 Dokka，也不会混合两者的资源文件。
 
@@ -185,9 +193,9 @@ JVM 源码使用 KDoc，各 Gradle module 通过 Dokka 生成独立 HTML 站点�
 - [x] 实现首个 [ES CLI/runner](es/cli/) 与跨文件 unused-code 门禁
 - [x] 将 ES 拆分为 [runner](es/cli/)、[rules](es/rules/) 和 [engine](es/engine/) 三个工程
 - [ ] 增加更多跨文件检查与稳定的项目发现策略
-- [x] 实现[基于 Android Lint 的 JVM lint 引擎](jvm/engine/)
+- [x] 实现 [JVM gate engine](jvm/engine/)
 - [x] 实现 [Gradle 插件和编译后触发机制](jvm/gradle/)
-- [ ] 增加特定 Agent 的集成指南与[端到端示例](examples/)
+- [x] 增加可执行的 ES、Java 与 Android [端到端示例](examples/)
 
 这份路线图代表初步方向。随着首批集成逐渐明确 Agent 对质量门禁的实际需求，它也会继续调整。
 
@@ -200,7 +208,7 @@ Agentic Gate 正处于公共接口和工作方式仍可被早期反馈塑造的�
 - 质量门禁应该在什么时候运行；
 - 什么样的反馈能够帮助 Agent 修复失败。
 
-我们也特别欢迎 ESLint、Android Lint、UAST 或 Gradle 方面的实践经验。请通过 [GitHub Issues](https://github.com/johnsonlee/agentic-gate/issues) 发起讨论。
+我们也特别欢迎 ESLint、JVM 分析或 Gradle 方面的实践经验。请通过 [GitHub Issues](https://github.com/johnsonlee/agentic-gate/issues) 发起讨论。
 
 ## 许可证
 

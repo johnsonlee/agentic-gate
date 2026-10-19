@@ -54,10 +54,10 @@ This puts validation next to the change that caused the failure, while the relev
 
 Agentic Gate builds on the native analysis and build systems of each ecosystem instead of replacing them.
 
-| Ecosystem | Foundation | Integration | Status |
-| --- | --- | --- | :---: |
-| JavaScript / TypeScript | ES CLI/runner + [ESLint](https://eslint.org/) plugins | Coordinate every configured ESLint plugin and add project-wide, cross-file analysis. | 🛠️ In Progress |
-| Java / Kotlin | Android Lint + UAST | Provide custom lint rules and a Gradle plugin that triggers Agentic Gate after compilation. | 🛠️ In Progress |
+| Ecosystem | Integration | Status |
+| --- | --- | :---: |
+| JavaScript / TypeScript | Coordinate every configured ESLint plugin and add project-wide, cross-file analysis. | 🛠️ In Progress |
+| Java / Kotlin | Enforce JVM quality rules through a Gradle plugin that triggers Agentic Gate after compilation. | 🛠️ In Progress |
 
 The platform integrations differ, but the contract stays the same: **check, enforce, and return actionable violations**.
 
@@ -98,7 +98,9 @@ export default {
 
 `gate.config.ts` identifies source files and public entry points; it does not configure rule behavior, thresholds, exceptions, severities, or architecture layers. A check whose outcome can be negotiated through configuration is not a hard gate.
 
-The rules package contains ten native file-local rules and 32 non-negotiable Unicorn checks, plus project-wide policies for duplicate top-level statements, duplicate functions, duplicate constants within a module directory, extensionless non-directory imports, module-internal leaks, repeated template literal fragments, unused code, module dependency cycles, workspace package boundaries, workspace binary availability, and workspace dependency cycles. Native rules also reject wildcard re-exports so module interfaces cannot expand implicitly. Module and workspace graphs must remain DAGs; cycle violations include the resolved graph as a Mermaid flowchart.
+`eslint.targets` selects the paths passed to ESLint, and `eslint.configFile` may name one explicit `eslint.config.*` file. `project.files` accepts either `"eslint-input"` or an explicit array of source globs; `project.entries` accepts either `"auto"` or an explicit array of public entries. When no path is supplied, exactly one discovered `gate.config.*` file is allowed.
+
+The rules package contains 12 native file-local rules and 32 non-negotiable Unicorn checks, plus project-wide policies for duplicate top-level statements, duplicate functions, duplicate constants within a module directory, extensionless non-directory imports, module-internal leaks, repeated template literal fragments, unused code, module dependency cycles, workspace package boundaries, workspace binary availability, and workspace dependency cycles. Native rules also reject wildcard re-exports so module interfaces cannot expand implicitly. Module and workspace graphs must remain DAGs; cycle violations include the resolved graph as a Mermaid flowchart.
 
 In the ES gate, a named source file is a single-file interface. Relative references to concrete files include the actual source extension, while an extensionless relative reference always means a directory module. A directory becomes a module only when its `index.{ts,tsx,js,jsx,mjs,cjs}` fronts additional implementation files or child modules. Outside callers import that directory; extensionless file imports, explicit index imports, implementation-file imports, nested-module traversal, and index-only wrapper directories are violations. Package exports target real module indexes. Rule definitions live under [`src/rules/unit`](es/rules/src/rules/unit/) for one-file ESLint checks and [`src/rules/global`](es/rules/src/rules/global/) for project-wide checks; TypeDoc renders their source comments as the ES gate's developer site.
 
@@ -109,7 +111,7 @@ The JVM implementation follows the same one-way project structure:
 ```mermaid
 flowchart TD
     GRADLE["io.johnsonlee.agentic.gate<br/>Gradle composition root"] --> RULES["rules<br/>concrete policies"]
-    GRADLE --> ENGINE["engine<br/>Android Lint execution"]
+    GRADLE --> ENGINE["engine<br/>analysis and execution flow"]
     RULES --> ENGINE
 ```
 
@@ -121,7 +123,7 @@ plugins {
 }
 ```
 
-The initial `AgenticGateSilentCatch` rule blocks provably empty Java and Kotlin catch clauses. Every violation includes its source range and an actionable repair instruction. The Gradle plugin has no rule settings or severity switches.
+The JVM gate currently blocks empty catch clauses, duplicate complete statements and functions, unused local variables and locally controlled parameters, hardcoded string comparisons, wildcard imports, unreviewable string literals, and magic numbers. The same rules run through the standalone engine for Java/Kotlin projects and through native variant lint tasks in Android projects. Every violation includes its source range and an actionable repair instruction. The Gradle plugin has no rule settings or severity switches.
 
 ## Repository Layout
 
@@ -132,12 +134,13 @@ The initial `AgenticGateSilentCatch` rule blocks provably empty Java and Kotlin 
 │   ├── rules/                  # Native rules and curated third-party hard gates
 │   └── engine/                 # Contracts, analyzers, and execution flow
 ├── jvm/
-│   ├── engine/                 # Android Lint-based JVM lint engine
+│   ├── engine/                 # JVM analysis and execution flow
 │   ├── rules/                  # JVM quality policies
 │   └── gradle/                 # Gradle composition root and lifecycle plugin
 ├── examples/
-│   ├── es-runner/              # End-to-end ES CLI example
-│   └── android-gradle/         # End-to-end Android + Gradle example
+│   ├── es/                     # End-to-end ES example
+│   ├── java/                   # Gradle Java example
+│   └── android/                # Native Android lint example
 ├── docs/                       # Generated aggregate developer documentation
 ├── tooling/
 │   └── docs.ts                 # Developer documentation assembly tool
@@ -159,7 +162,7 @@ The public ES result and feedback model lives in the engine [`contract`](es/engi
 
 ## Project Status
 
-Agentic Gate is currently **pre-alpha**. The repository contains the ES project runner, built-in ESLint and project-wide checks, the Android Lint-based JVM engine, an initial JVM rule, and a Gradle plugin with tested post-compilation enforcement. The packages have not been published. APIs, configuration, and package coordinates may change before the first stable release.
+Agentic Gate is currently **pre-alpha**. The repository contains the ES project runner, built-in ESLint and project-wide checks, the JVM gate engine and hard rules, and a Gradle plugin with tested Java, Kotlin, and Android post-compilation enforcement. The packages have not been published. APIs, configuration, and package coordinates may change before the first stable release.
 
 ## Development
 
@@ -167,15 +170,20 @@ The ES workspace uses [Bun](https://bun.sh/) for dependency management, scripts,
 
 ```sh
 bun install
+bun run build
+bun install --frozen-lockfile
+bun run gate:self
 bun run check
 bun run docs
 bun run check:unused
-bun run example:runner
+bun run example:es
+bun run example:java
+bun run example:android
 ```
 
 `bun run check` verifies the ES CLI, its ESLint rules, multi-file runner fixtures, built-artifact smoke test, JVM checks, Gradle TestKit fixtures, and local Maven publications. `bun run check:unused` is repository maintenance rather than the public CLI interface.
 
-Developer documentation stays with the implementation that defines it. The ES rules project uses TSDoc comments and TypeDoc to generate `es/rules/build/docs`; `docs.manifest.json` declares that site to the root assembler. `bun run docs` generates every implemented gate and creates the shared portal at `docs/index.html`, with each complete site copied under `docs/gates/`.
+Developer documentation stays with the implementation that defines it. A repository-level TypeDoc configuration renders TSDoc from all three ES projects into `es/rules/build/docs`; `docs.manifest.json` declares that ES site to the root assembler. `bun run docs` generates every implemented gate and creates the shared portal at `docs/index.html`, with each complete site copied under `docs/gates/`.
 
 JVM source uses KDoc, each Gradle module uses Dokka to produce its standalone HTML site, and each module registers that output with its own `docs.manifest.json`. The root assembler only consumes static sites, so Kotlin documentation does not couple TypeDoc and Dokka or merge their assets.
 
@@ -185,9 +193,9 @@ JVM source uses KDoc, each Gradle module uses Dokka to produce its standalone HT
 - [x] Build the initial [ES CLI/runner](es/cli/) and cross-file unused-code gate
 - [x] Split ES into the [runner](es/cli/), [rules](es/rules/), and [engine](es/engine/) projects
 - [ ] Add more cross-file checks and stable project-discovery policies
-- [x] Build the [Android Lint-based JVM lint engine](jvm/engine/)
+- [x] Build the [JVM gate engine](jvm/engine/)
 - [x] Build the [Gradle plugin and post-compilation trigger](jvm/gradle/)
-- [ ] Add agent-specific integration guides and [end-to-end examples](examples/)
+- [x] Add executable ES, Java, and Android [end-to-end examples](examples/)
 
 This roadmap is an initial direction and will evolve as the first integrations reveal what agents need from a useful quality gate.
 
@@ -200,7 +208,7 @@ Agentic Gate is at the stage where early feedback can shape its public interface
 - when the gate should run; and
 - what feedback would help the agent repair a failure.
 
-Experience with ESLint, Android Lint, UAST, or Gradle is especially welcome. Start a conversation in [GitHub Issues](https://github.com/johnsonlee/agentic-gate/issues).
+Experience with ESLint, JVM analysis, or Gradle is especially welcome. Start a conversation in [GitHub Issues](https://github.com/johnsonlee/agentic-gate/issues).
 
 ## License
 

@@ -4,7 +4,9 @@ import {
   defineRules,
   noConsecutivePushStringLiterals,
   noDuplicatedImports,
+  noEscapedNewlinesInTemplateLiterals,
   noHardcodedStringComparisons,
+  noJoinedStringLiterals,
   noMagicNumbers,
   noMisnamedConstantObjects,
   noSilentCatch,
@@ -18,7 +20,9 @@ import { createGateConfig, curatedUnicornConfig } from "./configs";
 const nativeRules = defineRules([
   noConsecutivePushStringLiterals,
   noDuplicatedImports,
+  noEscapedNewlinesInTemplateLiterals,
   noHardcodedStringComparisons,
+  noJoinedStringLiterals,
   noMagicNumbers,
   noMisnamedConstantObjects,
   noSilentCatch,
@@ -48,10 +52,12 @@ type AgenticGateEslint = ESLint.Plugin & {
  * | --- | --- |
  * | `agentic-gate/no-consecutive-push-string-literals` | Two or more adjacent calls that push string literals into the same receiver |
  * | `agentic-gate/no-duplicated-imports` | Multiple static imports from the same module |
+ * | `agentic-gate/no-escaped-newlines-in-template-literals` | Interior newline escapes that hide a template literal's rendered layout |
  * | `agentic-gate/no-hardcoded-string-comparisons` | String literals used directly in comparisons or switch cases |
+ * | `agentic-gate/no-joined-string-literals` | Two or more static string literals joined into a statically known string |
  * | `agentic-gate/no-magic-numbers` | Unnamed numeric literals in executable expressions |
  * | `agentic-gate/no-misnamed-constant-objects` | `as const` object names and fields that do not follow constant naming |
- * | `agentic-gate/no-silent-catch` | Catch blocks that do not explicitly handle or propagate the error |
+ * | `agentic-gate/no-silent-catch` | Empty catch blocks that provably discard the exception |
  * | `agentic-gate/no-unchanged-parameter-forwarding` | Wrappers that only forward their parameters |
  * | `agentic-gate/no-unreviewable-string-literals` | String-literal source lines outside GitHub's intra-line diff highlighting contract |
  * | `agentic-gate/no-unused-code` | Unused imports, variables, parameters, catch bindings, and local declarations |

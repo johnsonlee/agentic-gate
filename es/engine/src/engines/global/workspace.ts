@@ -6,6 +6,8 @@ import {
   type Violation
 } from "../../contract";
 import {
+  cleanSourceSpecifier,
+  isRelativeSourceSpecifier,
   loadWorkspaceGraph,
   PathSegments,
   workspaceManifestPath,
@@ -151,7 +153,7 @@ export async function findCrossProjectFileReferences(
   const sourceFiles = new Set(project.files.map((file) => resolve(file)));
   const violations: Violation[] = [];
   for (const source of project.sources) {
-    const caller = owningProject(graph.projects, source.file);
+    const caller = sourceOwner(graph, source.file);
     if (!caller) continue;
     for (const reference of collectSourceReferences(source.program)) {
       const targetFile = resolveSourceReference(
@@ -159,8 +161,11 @@ export async function findCrossProjectFileReferences(
         reference.specifier,
         sourceFiles
       );
-      const target = targetFile
-        ? owningProject(graph.projects, targetFile)
+      const referencedPath = targetFile ?? (isRelativeSourceSpecifier(reference.specifier)
+        ? resolve(dirname(source.file), cleanSourceSpecifier(reference.specifier))
+        : undefined);
+      const target = referencedPath
+        ? owningProject(graph.projects, referencedPath)
         : undefined;
       if (!target || target.name === caller.name) continue;
       violations.push(createProjectViolation(
@@ -231,6 +236,19 @@ function owningProject(
     .sort((left, right) => right.directory.length - left.directory.length)[0];
 }
 
+function sourceOwner(
+  graph: WorkspaceGraph,
+  sourceFile: string
+): WorkspaceProject | undefined {
+  const owner = owningProject(graph.projects, sourceFile);
+  if (!owner && graph.projects.length > 0) {
+    throw new Error(
+      `Source file '${relative(graph.root, sourceFile)}' is not owned by a workspace package.`
+    );
+  }
+  return owner;
+}
+
 function referencedWorkspaceProject(
   projects: readonly WorkspaceProject[],
   specifier: string
@@ -250,12 +268,15 @@ export async function findWorkspaceBoundaryViolations(
   const graph = await loadWorkspaceGraph(project.cwd);
   const violations: Violation[] = [];
   for (const source of project.sources) {
-    const caller = owningProject(graph.projects, source.file);
+    const caller = sourceOwner(graph, source.file);
     if (!caller) continue;
     for (const reference of collectSourceReferences(source.program)) {
       const target = referencedWorkspaceProject(graph.projects, reference.specifier);
       if (!target || target.name === caller.name) continue;
-      const kind = !caller.dependencies.has(target.name)
+      const declaredDependencies = reference.typeOnly
+        ? caller.dependencies
+        : caller.architectureDependencies;
+      const kind = !declaredDependencies.has(target.name)
         ? WorkspaceBoundaryKinds.UNDECLARED_DEPENDENCY
         : !target.publicSpecifiers.has(reference.specifier)
           ? WorkspaceBoundaryKinds.PRIVATE_IMPORT

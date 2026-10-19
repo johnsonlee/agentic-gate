@@ -37,6 +37,8 @@ export default {
 
 `eslint.config.*` remains the source of truth for the project's additional ESLint plugins and file-local rules. `gate.config.ts` describes project discovery. It cannot weaken, disable, or parameterize an Agentic Gate rule. Package manifests define project architecture; there is no configurable layer map.
 
+`eslint.targets` selects the paths passed to ESLint, and `eslint.configFile` may name one explicit ESLint config. `project.files` accepts `"eslint-input"` or an array of source globs; `project.entries` accepts `"auto"` or an array of public entries. Automatic discovery fails when more than one `gate.config.*` candidate exists, and invalid field types fail instead of falling back.
+
 `agentic-gate/no-module-dependency-cycles` requires the resolved source-module graph to remain acyclic. A violation includes the actual resolved graph as a Mermaid flowchart with cycle nodes and edges highlighted; human output prints the diagram as a fenced block and JSON output preserves it in `visualization`.
 
 At a workspace root, the runner also treats every package declared by
@@ -53,13 +55,13 @@ Unused-code checks use Knip as an internal module-graph analyzer. `no-duplicated
 
 `agentic-gate/no-extensionless-non-directory-imports` allows an extensionless relative reference only when its target is a directory module with an index interface. Concrete files use their actual source extension; ordinary directories and unresolved targets are blocked. The same directory boundary drives `agentic-gate/no-module-internal-leaks`. A named source file is a single-file interface. A directory becomes a module only when its `index.{ts,tsx,js,jsx,mjs,cjs}` fronts additional implementation files. Code outside that directory imports the module directory; it cannot name the index, address an implementation file, or pass through the module to a nested module. An index-only wrapper is rejected in favor of a sibling named source file. Library `package.json#exports` targets must point to module index files; declaration indexes such as `index.d.ts` are accepted for type conditions.
 
-The project pass also reports the second and later occurrence of each repeated static template literal fragment containing a letter or number, including fragments in TypeScript template literal types and declaration files. Tagged templates, punctuation-only fragments, and ordinary quoted strings are outside that rule. Public check IDs remain under `agentic-gate/*`, while engine-specific details appear only as trace evidence in each violation. Rule definitions are organized in the rules package by analysis scope: [unit rules](../rules/src/rules/unit/index.ts) run through ESLint against one file, while [global rules](../rules/src/rules/global/index.ts) consume project-wide analysis.
+The project pass also reports the second and later occurrence of each repeated static template literal fragment containing a Unicode letter, mark, number, or connector punctuation character, including fragments in TypeScript template literal types and declaration files. Tagged templates, punctuation-only fragments, and ordinary quoted strings are outside that rule. Public check IDs remain under `agentic-gate/*`, while engine-specific details appear only as trace evidence in each violation. Rule definitions are organized in the rules package by analysis scope: [unit rules](../rules/src/rules/unit/index.ts) run through ESLint against one file, while [global rules](../rules/src/rules/global/index.ts) consume project-wide analysis.
 
 Module interfaces list their public symbols explicitly. `agentic-gate/no-wildcard-exports` blocks `export *` and `export type *` because either form lets an implementation file expand its caller's public API without an interface change.
 
 ## Developer documentation
 
-Run `bun run docs` at the repository root to render source comments from `agentic-gate-rules` with TypeDoc and include its standalone site in the shared Agentic Gate developer portal.
+Run `bun run docs` at the repository root to render source comments from all ES projects with TypeDoc and include the ES site in the shared Agentic Gate developer portal.
 
 `bun run gate:self` runs the published gate policy against every JavaScript and TypeScript file in the repository, including source, tests, configuration, tooling, and built-artifact checks under `smoke/`. Generated output, dependencies, and intentional violation fixtures under `tests/fixtures` are excluded from this self-check.
 

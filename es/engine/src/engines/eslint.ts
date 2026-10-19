@@ -33,13 +33,11 @@ export async function runEslint(
   const probedFile = configuredFile === undefined
     ? await configProbe.findConfigFile()
     : undefined;
-  const discoveredFile = configuredFile === false
-    ? undefined
-    : configuredFile
-      ? (isAbsolute(configuredFile) ? configuredFile : resolve(cwd, configuredFile))
-      : probedFile && belongsToProject(cwd, probedFile)
-        ? probedFile
-        : undefined;
+  const discoveredFile = configuredFile
+    ? (isAbsolute(configuredFile) ? configuredFile : resolve(cwd, configuredFile))
+    : probedFile && belongsToProject(cwd, probedFile)
+      ? probedFile
+      : undefined;
 
   const typescriptConfig: Linter.Config = {
     name: "agentic-gate/typescript-parser",
@@ -49,6 +47,7 @@ export async function runEslint(
 
   const eslint = new ESLint({
     cwd,
+    allowInlineConfig: false,
     baseConfig: [typescriptConfig],
     overrideConfig: gateConfig,
     ...(discoveredFile
@@ -62,7 +61,9 @@ export async function runEslint(
     result.messages
       .filter((message) => message.severity > 0)
       .map((message): Violation => {
-        const ruleId = message.ruleId ?? "eslint/parse-error";
+        const ruleId = message.ruleId ?? (message.fatal
+          ? "eslint/parse-error"
+          : "eslint/lint-message");
         const instruction = message.suggestions?.[0]?.desc ??
           `Fix the '${ruleId}' violation: ${message.message}`;
         return {

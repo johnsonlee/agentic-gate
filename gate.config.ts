@@ -18,9 +18,9 @@ export default {
       "es/cli/tests/*.test.ts",
       "es/cli/smoke/**/*.mjs",
       "es/cli/build.ts",
-      "examples/es-runner/eslint.config.mjs",
-      "examples/es-runner/gate.config.ts",
-      "examples/es-runner/src/index.ts"
+      "examples/es/eslint.config.mjs",
+      "examples/es/gate.config.ts",
+      "examples/es/src/index.ts"
     ]
   }
 } satisfies AgenticGateConfig;

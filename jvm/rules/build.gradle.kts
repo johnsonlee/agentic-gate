@@ -10,6 +10,7 @@ dependencies {
     compileOnly(libs.android.lint.api)
 
     testImplementation(kotlin("test"))
+    testImplementation(libs.android.lint.api)
     testImplementation(libs.android.lint.tests)
 }
 

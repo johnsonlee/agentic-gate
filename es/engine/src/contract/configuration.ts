@@ -8,7 +8,7 @@ export const GateConfigValues = {
 export interface AgenticGateConfig {
   eslint?: {
     targets?: string[];
-    configFile?: string | false;
+    configFile?: string;
   };
   project?: {
     files?: typeof GateConfigValues.ESLINT_INPUT_FILES | string[];

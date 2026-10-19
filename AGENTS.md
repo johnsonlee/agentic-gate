@@ -86,7 +86,6 @@ A workspace package is one architecture layer node. The gate does not accept a s
 Layer division is structurally valid only when all of these conditions hold:
 
 - every production source file belongs to exactly one workspace package, determined by its nearest owning `package.json`;
-- every package owns a concrete responsibility and public interface rather than acting only as a forwarding or re-export wrapper;
 - every production file is reachable from that package's public entries;
 - code outside a package reaches it through its package name and declared `exports`, never through a relative path or an internal source path; and
 - a directory module and a workspace package both hide their implementation behind their declared interface.
@@ -94,6 +93,7 @@ Layer division is structurally valid only when all of these conditions hold:
 Layer relationships are valid only when all of these conditions hold:
 
 - every cross-package source import has a matching direct dependency in the caller's manifest;
+- runtime source imports require `dependencies`, `optionalDependencies`, or `peerDependencies`; `devDependencies` authorize only type-only imports and build tooling;
 - every imported package subpath is explicitly public in the callee's `exports`;
 - the workspace package dependency graph is acyclic;
 - static source dependencies point from the composition root and policy packages toward engine contracts and lower capabilities; and
@@ -101,7 +101,7 @@ Layer relationships are valid only when all of these conditions hold:
 
 Static dependency direction and runtime call direction are different graphs. In this repository, the required static graph is `cli -> rules`, `cli -> engine`, and `rules -> engine`. At runtime, the CLI creates the rules, passes them to the engine, and the engine calls those injected rules. The runtime callback does not authorize an `engine -> rules` source dependency.
 
-The architecture gate blocks undeclared workspace dependencies, relative imports across package boundaries, imports of unexported package internals, forwarding-only package boundaries, package dependency cycles, and source dependencies from the engine back to concrete rules or the CLI. Structural analysis cannot infer whether a business responsibility was named well; it enforces that the declared boundary is real, cohesive, reachable, and one-way.
+The architecture gate blocks undeclared workspace dependencies, relative imports across package boundaries, imports of unexported package internals, package dependency cycles, and source dependencies from the engine back to concrete rules or the CLI. Structural analysis cannot infer whether a business responsibility was named well or whether a forwarding package has business value; it enforces the boundaries and dependency direction that source and manifests prove.
 
 ### Source modules and interfaces
 
@@ -112,7 +112,7 @@ A `package.json` defines a package/project boundary. Within a source tree, use t
 - Do not create a directory containing only `index.*` to satisfy a structural rule. Replace it with a named source file.
 - External callers import a directory module through the directory path. Do not spell `index` explicitly.
 - External callers must not import implementation files or traverse through a module into its nested modules.
-- A package export may expose a named single-file interface or a real directory module index. It must not expose a directory module's implementation file.
+- A package export exposes a real module index. It must not expose a directory module's implementation file or an individual internal source file.
 - Module-name analysis must distinguish conceptual affinity, lexical similarity, and token-boundary similarity. Do not collapse them into one score or enforce them with one heuristic gate.
 
 Design the interface first. A structural rule should reveal weak boundaries, not encourage ceremonial directories or forwarding indexes.
@@ -130,6 +130,7 @@ Design the interface first. A structural rule should reveal weak boundaries, not
 - Consecutive means two or more adjacent occurrences in the same ordered syntax sequence. Two is the definition boundary, not a configurable threshold.
 - Hard rules have no configurable behavior, thresholds, severity, disable switch, allowlist, or exception list. `gate.config.ts` may describe project discovery inputs, never negotiate whether a violation counts.
 - The numeric values -1, 0, and 1 are structural algorithm values rather than magic numbers: they express predecessor or absence, the zero element or first position, and one-step progression. This fixed semantic definition is part of the rule, not a configurable allowlist.
+- Other numeric literals are considered named when they initialize a `const`, enum member, readonly field, statically named object field, or JSX attribute. Computed member indexes are executable expressions and remain subject to the rule.
 - An unsupported or ambiguous analysis input fails explicitly. It must never select the first candidate, invent missing evidence, or silently skip a file.
 
 ### Scope and reuse
@@ -180,10 +181,8 @@ Agentic Gate must gate its own source.
 - Add fixtures for project-wide behavior and focused RuleTester cases for file-local ESLint behavior.
 - Tests should prove externally meaningful behavior and important failure modes. Do not add tests that merely repeat an implementation detail.
 - Built-artifact validation belongs under `smoke/`; it is neither production tooling nor an ordinary source-level unit test.
-- For JVM changes, run `bun run check:jvm`; it executes the Gradle checks and verifies every Maven publication in the local repository.
+- For JVM changes, run `bun run check:jvm`; it executes the Gradle checks and publishes the artifacts to Maven Local. The Java example then resolves the plugin marker, implementation, engine, and rules from that local repository.
 - Run `git diff --check` and search for stale names or paths after renames.
-
-Performance regression testing must use representative multi-graph load tests as its only performance acceptance standard. Single-graph runs are correctness gates only. Do not spend time on single-graph performance measurements, diagnosis, candidate selection, or regression acceptance. Loading multiple graphs does not qualify when the measured request still targets only one graph. Preserve historical measurements without treating them as performance evidence under this rule.
 
 ## CI and Release
 
@@ -194,7 +193,7 @@ Performance regression testing must use representative multi-graph load tests as
 - A version without `-` is a stable release and publishes with the npm `latest` tag.
 - The release tag is the source of the npm package version. Do not manually maintain a release-only version change before tagging.
 - Publish the ES packages in dependency order: `agentic-gate-engine`, `agentic-gate-rules`, then `agentic-gate-cli`. Rewrite internal workspace dependencies to the tag version before publishing.
-- Publishing uses the repository's `NPM_TOKEN` secret and must run the complete CI command before publication.
+- npm publishing uses `NPM_TOKEN`. Maven Central publishing uses `GPG_KEY_ARMOR`, `GPG_KEY_ID`, `GPG_PASSPHRASE`, `OSSRH_PACKAGE_GROUP`, `OSSRH_USERNAME`, and `OSSRH_PASSWORD`. Every release runs the complete CI command before publication.
 - Publish `jvm/engine`, `jvm/rules`, the Gradle plugin implementation, and its plugin marker to Maven Central with `io.johnsonlee.sonatype-publish-plugin`. The release tag supplies their Gradle version.
 
 ## Change Discipline

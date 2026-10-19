@@ -10,7 +10,7 @@ import {
 const fixtures = resolve(import.meta.dir, "fixtures");
 const CLEAN_PROJECT_FILE_COUNT = 2;
 const EXPECTED_SOURCE_DUPLICATE_COUNT = 2;
-const EXPECTED_TEMPLATE_FRAGMENT_DUPLICATE_COUNT = 7;
+const EXPECTED_TEMPLATE_FRAGMENT_DUPLICATE_COUNT = 5;
 const DUPLICATED_FUNCTIONS_RULE_ID = "agentic-gate/no-duplicated-functions";
 const DUPLICATED_STATEMENTS_RULE_ID = "agentic-gate/no-duplicated-statements";
 const DUPLICATED_CONSTANTS_IN_MODULE_RULE_ID =
@@ -71,7 +71,7 @@ describe("ES Agentic Gate runner", () => {
           check: "agentic-gate/no-silent-catch",
           location: expect.objectContaining({
             file: "src/index.ts",
-            start: expect.objectContaining({ line: 5 })
+            start: expect.objectContaining({ line: 7 })
           }),
           evidence: expect.objectContaining({ engine: "eslint" })
         }),
@@ -216,7 +216,7 @@ describe("workspace dependency cycles", () => {
     expect(result.decision).toBe("block");
   });
 
-  it("excludes development-only dependencies from the architecture graph", async () => {
+  it("does not let development dependencies authorize production imports", async () => {
     const result = await runGate({
       cwd: resolve(fixtures, "workspace-dev-cycle"),
       patterns: ["packages/*/src/**/*.ts"],
@@ -232,7 +232,18 @@ describe("workspace dependency cycles", () => {
     });
 
     expect(violationsFor(result, WORKSPACE_DEPENDENCY_CYCLES_RULE_ID)).toEqual([]);
-    expect(result.decision).toBe("pass");
+    expect(violationsFor(result, WORKSPACE_INTERNAL_LEAKS_RULE_ID)).toEqual([
+      expect.objectContaining({
+        location: expect.objectContaining({
+          file: "packages/engine/src/index.ts"
+        }),
+        evidence: expect.objectContaining({
+          messageId: "UNDECLARED_DEPENDENCY",
+          symbol: "fixture-dev-application"
+        })
+      })
+    ]);
+    expect(result.decision).toBe("block");
   });
 
 });
@@ -302,13 +313,18 @@ describe("workspace boundaries", () => {
     expect(violationMessageIds(fileReferences)).toEqual([
       "SCRIPT_REFERENCE",
       "SOURCE_REFERENCE",
+      "SOURCE_REFERENCE",
       "SOURCE_EXPORT"
     ]);
     expect(violationFiles(fileReferences)).toEqual([
       "packages/consumer/package.json",
       WORKSPACE_CONSUMER_SOURCE,
+      WORKSPACE_CONSUMER_SOURCE,
       "packages/target/package.json"
     ]);
+    expect(fileReferences.map(({ evidence }) => evidence.symbol)).toContain(
+      "../../target/dist/index.js"
+    );
     expect(result.decision).toBe("block");
   });
 });
@@ -423,20 +439,6 @@ describe("template-literal project analysis", () => {
           start: expect.objectContaining({ line: 5 })
         }),
         evidence: expect.objectContaining({ engine: "source-duplicates" })
-      }),
-      expect.objectContaining({
-        message: expect.stringContaining('fragment "select "'),
-        location: expect.objectContaining({
-          file: "src/b.ts",
-          start: expect.objectContaining({ line: 7 })
-        })
-      }),
-      expect.objectContaining({
-        message: expect.stringContaining('fragment " from records"'),
-        location: expect.objectContaining({
-          file: "src/b.ts",
-          start: expect.objectContaining({ line: 7 })
-        })
       }),
       expect.objectContaining({
         message: expect.stringContaining("first occurrence in src/a.ts:13"),

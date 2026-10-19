@@ -2,14 +2,18 @@ package io.johnsonlee.agentic.gate
 
 import com.android.tools.lint.LintCliClient
 import com.android.tools.lint.LintCliFlags
+import com.android.tools.lint.client.api.IssueRegistry
 import com.android.tools.lint.client.api.LintClient
 import com.android.tools.lint.client.api.LintRequest
+import com.android.tools.lint.client.api.Vendor
+import com.android.tools.lint.detector.api.CURRENT_API
 import com.android.tools.lint.detector.api.Incident
+import com.android.tools.lint.detector.api.Issue
 import com.android.tools.lint.detector.api.Position
 import com.android.tools.lint.detector.api.Scope
 import java.io.File
 
-/** Executes injected Android Lint/UAST rules and returns agent-facing violations. */
+/** Executes injected JVM policies and returns agent-facing violations. */
 public class AgenticGateEngine(
     private val ruleFactory: () -> GateRuleRegistry,
 ) {
@@ -29,6 +33,7 @@ public class AgenticGateEngine(
 
         LintClient.clientName = CLIENT_NAME
         val rules = ruleFactory()
+        val runtimeIssues = RuntimeIssueRegistry(rules)
         val flags = LintCliFlags().apply {
             isSetExitCode = true
             isWarningsAsErrors = true
@@ -39,7 +44,7 @@ public class AgenticGateEngine(
             isQuiet = true
             allowSuppress = false
             allowBaselineSuppress = false
-            exactCheckedIds = rules.issues.map { issue -> issue.id }.toSet()
+            exactCheckedIds = runtimeIssues.issues.map { issue -> issue.id }.toSet()
             sourcesOverride = sources.mapNotNull(File::getParentFile).distinct()
             classesOverride = request.classDirectories.filter(File::exists)
             librariesOverride = request.libraries.filter(File::exists)
@@ -50,7 +55,7 @@ public class AgenticGateEngine(
             setScope(Scope.JAVA_FILE_SCOPE)
         }
 
-        client.run(rules, lintRequest)
+        client.run(runtimeIssues, lintRequest)
         val files = sources
             .map { file -> file.displayPath(request.projectDirectory) }
             .sorted()
@@ -84,10 +89,9 @@ public class AgenticGateEngine(
                 end = source.end.toSourcePosition(),
             ),
             evidence = ViolationEvidence(
-                engine = GateEngine.ANDROID_LINT,
                 ruleId = issue.id,
             ),
-            remediation = rules.feedbackFor(issue),
+            remediation = rules.feedbackFor(issue.id),
         )
     }
 
@@ -107,4 +111,28 @@ public class AgenticGateEngine(
             SourcePosition(line = position.line + 1, column = position.column + 1)
         }
     }
+}
+
+private class RuntimeIssueRegistry(
+    private val gateRules: GateRuleRegistry,
+) : IssueRegistry() {
+    override val issues: List<Issue> = gateRules.rules.map { rule ->
+        val issue = rule.engineDefinition() as? Issue
+            ?: error("JVM rule '${rule.id}' has an unsupported engine definition.")
+        require(issue.id == rule.id) {
+            "JVM rule '${rule.id}' has engine definition '${issue.id}'."
+        }
+        issue
+    }
+
+    override val api: Int = CURRENT_API
+
+    override val minApi: Int = CURRENT_API
+
+    override val vendor: Vendor = Vendor(
+        vendorName = "Agentic Gate",
+        identifier = "io.johnsonlee.agentic.gate",
+        feedbackUrl = "https://github.com/johnsonlee/agentic-gate/issues",
+        contact = "https://github.com/johnsonlee/agentic-gate",
+    )
 }

@@ -17,7 +17,7 @@ type Node = { type: string; [key: string]: any };
 
 const Messages = {
   UNCHANGED_FORWARDING:
-    "Function '{{name}}' only forwards its parameters unchanged to '{{callee}}'. Call '{{callee}}' directly, or add the behavior that makes this wrapper necessary."
+    "Function '{{name}}' only forwards its parameters, possibly reordered, to '{{callee}}'. Call '{{callee}}' directly, or add the behavior that makes this wrapper necessary."
 } as const;
 
 type NoUnchangedParameterForwardingRule = {

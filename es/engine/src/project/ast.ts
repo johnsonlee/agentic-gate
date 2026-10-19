@@ -1,5 +1,6 @@
 /** ESTree and TypeScript ESTree node names used by built-in analyzers. */
 export const AstNodeTypes = {
+  ARRAY_EXPRESSION: "ArrayExpression",
   ARROW_FUNCTION_EXPRESSION: "ArrowFunctionExpression",
   ASSIGNMENT_EXPRESSION: "AssignmentExpression",
   ASSIGNMENT_PATTERN: "AssignmentPattern",

@@ -10,13 +10,17 @@ import {
 
 const gate = agenticGateEslint.configs.gate;
 const expectedRuleNames = [
-  "no-unused-code",
+  "no-consecutive-push-string-literals",
   "no-duplicated-imports",
+  "no-escaped-newlines-in-template-literals",
   "no-hardcoded-string-comparisons",
+  "no-joined-string-literals",
   "no-magic-numbers",
   "no-misnamed-constant-objects",
   "no-silent-catch",
   "no-unchanged-parameter-forwarding",
+  "no-unreviewable-string-literals",
+  "no-unused-code",
   "no-wildcard-exports"
 ] as const;
 
@@ -108,6 +112,32 @@ describe("curated integrations", () => {
         expect.objectContaining({ ruleId: "unicorn/no-duplicate-logical-operands", severity: 2 })
       ])
     );
+  });
+
+  it("replaces project-supplied options with fixed Unicorn defaults", () => {
+    const messages = new Linter().verify(
+      "value instanceof Array;",
+      [
+        {
+          plugins: { unicorn },
+          rules: {
+            "unicorn/no-instanceof-builtins": [
+              "warn",
+              { exclude: ["Array"], strategy: "strict" }
+            ]
+          }
+        },
+        ...agenticGateEslint.configs.unicorn
+      ],
+      { filename: "input.js" }
+    );
+
+    expect(messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        ruleId: "unicorn/no-instanceof-builtins",
+        severity: 2
+      })
+    ]));
   });
 
   it("excludes negotiable Unicorn policy rules", () => {

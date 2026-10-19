@@ -2,8 +2,10 @@ package io.johnsonlee.agentic.gate
 
 import java.io.File
 import java.nio.file.Files
+import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -25,8 +27,9 @@ class AgenticGatePluginFunctionalTest {
         val result = runner(project).withArguments("compileJava", "--stacktrace").buildAndFail()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":compileJava")?.outcome)
-        assertEquals(TaskOutcome.FAILED, result.task(":agenticGate")?.outcome)
+        assertEquals(TaskOutcome.FAILED, result.task(":agenticGateJvm")?.outcome)
         assertTrue(result.output.contains("AgenticGateSilentCatch"))
+        assertTrue(result.output.contains("AgenticGateUnusedParameter"))
         assertTrue(result.output.contains("Actionable:"))
         assertTrue(result.output.contains("Verify:"))
     }
@@ -47,8 +50,28 @@ class AgenticGatePluginFunctionalTest {
         val result = runner(project).withArguments("compileJava", "--stacktrace").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":compileJava")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":agenticGate")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":agenticGateJvm")?.outcome)
         assertTrue(result.output.contains("Agentic Gate passed"))
+    }
+
+    @Test
+    fun `gate invoked directly analyzes Java sources`() {
+        val project = testProject(
+            """
+            public final class Sample {
+                public void run() {
+                    try { execute(); } catch (RuntimeException error) { }
+                }
+                private void execute() { }
+            }
+            """,
+        )
+
+        val result = runner(project).withArguments("agenticGate", "--stacktrace").buildAndFail()
+
+        assertEquals(TaskOutcome.FAILED, result.task(":agenticGateJvm")?.outcome)
+        assertTrue(result.output.contains("AgenticGateSilentCatch"))
+        assertTrue(!result.output.contains("passed 0 JVM source files"))
     }
 
     @Test
@@ -82,8 +105,89 @@ class AgenticGatePluginFunctionalTest {
         val result = runner(project).withArguments("compileKotlin", "--stacktrace").buildAndFail()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":compileKotlin")?.outcome)
-        assertEquals(TaskOutcome.FAILED, result.task(":agenticGate")?.outcome)
+        assertEquals(TaskOutcome.FAILED, result.task(":agenticGateJvm")?.outcome)
         assertTrue(result.output.contains("AgenticGateSilentCatch"))
+        assertTrue(result.output.contains("AgenticGateUnusedParameter"))
+    }
+
+    @Test
+    fun `Android compile automatically runs the variant lint gate`() {
+        val project = Files.createTempDirectory("agentic-gate-gradle-android-").toFile()
+        val androidSdk = sequenceOf(
+            System.getenv("ANDROID_HOME"),
+            System.getenv("ANDROID_SDK_ROOT"),
+            File(System.getProperty("user.home"), "Library/Android/sdk").path,
+        )
+            .filterNotNull()
+            .map(::File)
+            .firstOrNull(File::isDirectory)
+        Properties().apply {
+            setProperty("sdk.dir", requireNotNull(androidSdk).absolutePath)
+        }.let { properties ->
+            project.resolve("local.properties").outputStream().use { output ->
+                properties.store(output, null)
+            }
+        }
+        project.resolve("settings.gradle.kts").writeText(
+            """
+            pluginManagement {
+                repositories {
+                    google()
+                    mavenCentral()
+                    gradlePluginPortal()
+                }
+            }
+            dependencyResolutionManagement {
+                repositories {
+                    google()
+                    mavenCentral()
+                }
+            }
+            rootProject.name = "fixture"
+            """.trimIndent(),
+        )
+        project.resolve("build.gradle.kts").writeText(
+            """
+            plugins {
+                id("com.android.library")
+                id("io.johnsonlee.agentic.gate")
+            }
+            android {
+                namespace = "sample"
+                compileSdk = 35
+            }
+            """.trimIndent(),
+        )
+        project.resolve("src/main/java/sample/Sample.java").apply {
+            parentFile.mkdirs()
+            writeText(
+                """
+                package sample;
+                public final class Sample {
+                    public void run() {
+                        try { execute(); } catch (RuntimeException error) { }
+                    }
+                    private void consume(String unused) { execute(); }
+                    private void execute() { }
+                }
+                """.trimIndent(),
+            )
+        }
+
+        val result = androidRunner(project)
+            .withGradleVersion("8.10.2")
+            .withArguments("compileDebugJavaWithJavac", "--stacktrace")
+            .buildAndFail()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":compileDebugJavaWithJavac")?.outcome)
+        assertEquals(TaskOutcome.FAILED, result.task(":lintDebug")?.outcome)
+        assertNull(result.task(":agenticGateDebug"))
+        assertTrue(result.output.contains("AgenticGateSilentCatch"))
+        assertTrue(
+            project.resolve("build/reports/lint-results-debug.xml")
+                .readText()
+                .contains("AgenticGateUnusedParameter"),
+        )
     }
 
     private fun testProject(source: String): File {
@@ -112,4 +216,24 @@ class AgenticGatePluginFunctionalTest {
         .withProjectDir(project)
         .withPluginClasspath()
         .forwardOutput()
+
+    private fun androidRunner(project: File): GradleRunner {
+        val metadata = Properties().apply {
+            AgenticGatePluginFunctionalTest::class.java.classLoader
+                .getResourceAsStream("plugin-under-test-metadata.properties")
+                .use { input -> load(requireNotNull(input)) }
+        }
+        val pluginClasspath = metadata
+            .getProperty("implementation-classpath")
+            .split(File.pathSeparator)
+            .map(::File)
+        val androidClasspath = System
+            .getProperty("androidPluginClasspath")
+            .split(File.pathSeparator)
+            .map(::File)
+        return GradleRunner.create()
+            .withProjectDir(project)
+            .withPluginClasspath(pluginClasspath + androidClasspath)
+            .forwardOutput()
+    }
 }

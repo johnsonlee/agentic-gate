@@ -10,6 +10,7 @@ plugins {
 description = "Gradle runner for Agentic Gate"
 
 dependencies {
+    compileOnly(libs.android.gradle.api)
     implementation(project(":jvm:engine"))
     implementation(project(":jvm:rules"))
     testImplementation(gradleTestKit())
@@ -49,6 +50,8 @@ kotlin {
 
 val functionalTestSourceSet = sourceSets.create("functionalTest")
 gradlePlugin.testSourceSets(functionalTestSourceSet)
+val androidFunctionalTestClasspath = configurations.create("androidFunctionalTestClasspath")
+dependencies.add(androidFunctionalTestClasspath.name, libs.android.gradle.plugin)
 configurations[functionalTestSourceSet.implementationConfigurationName]
     .extendsFrom(configurations.testImplementation.get())
 configurations[functionalTestSourceSet.runtimeOnlyConfigurationName]
@@ -57,6 +60,7 @@ configurations[functionalTestSourceSet.runtimeOnlyConfigurationName]
 val functionalTest by tasks.registering(Test::class) {
     testClassesDirs = functionalTestSourceSet.output.classesDirs
     classpath = functionalTestSourceSet.runtimeClasspath
+    systemProperty("androidPluginClasspath", androidFunctionalTestClasspath.asPath)
     shouldRunAfter(tasks.test)
 }
 

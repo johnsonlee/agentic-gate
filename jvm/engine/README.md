@@ -1,6 +1,6 @@
 # JVM Gate Engine
 
-`io.johnsonlee.agentic.gate:engine` executes injected Android Lint/UAST rules against Java and Kotlin sources. It owns lint execution, maps findings to the shared `Violation` contract, and attaches the rule's actionable repair instruction.
+`io.johnsonlee.agentic.gate:engine` executes injected quality rules against Java and Kotlin sources. It owns analysis flow, maps findings to the shared `Violation` contract, and attaches the rule's actionable repair instruction.
 
 The engine has no dependency on the concrete rules project. A composition root supplies a `GateRuleRegistry`, which keeps execution and policy separate.
 

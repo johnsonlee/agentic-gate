@@ -76,6 +76,21 @@ const curatedUnicornRuleNames = [
   "no-unused-iterator-helper"
 ] as const;
 
+function unicornRuleRegistry() {
+  if (!unicorn.rules) throw new Error("Unicorn does not expose its rule registry.");
+  return unicorn.rules;
+}
+
+const unicornRules = unicornRuleRegistry();
+
+function fixedRuleConfiguration(
+  name: typeof curatedUnicornRuleNames[number]
+): Linter.RuleEntry {
+  const rule = unicornRules[name];
+  if (!rule) throw new Error(`Unicorn rule '${name}' is unavailable.`);
+  return ["error", ...(rule.meta?.defaultOptions ?? [])];
+}
+
 /** ESLint flat-config layer that enables the curated Unicorn gate. */
 export const curatedUnicornConfig: Linter.Config = {
   name: "agentic-gate/unicorn-curated",
@@ -83,6 +98,9 @@ export const curatedUnicornConfig: Linter.Config = {
     unicorn
   },
   rules: Object.fromEntries(
-    curatedUnicornRuleNames.map((name) => [`unicorn/${name}`, "error"])
+    curatedUnicornRuleNames.map((name) => [
+      `unicorn/${name}`,
+      fixedRuleConfiguration(name)
+    ])
   )
 };

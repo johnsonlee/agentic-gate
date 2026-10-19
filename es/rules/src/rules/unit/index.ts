@@ -1,7 +1,9 @@
 export { defineRules } from "./policy.ts";
 export { default as noConsecutivePushStringLiterals } from "./no-consecutive-push-string-literals.ts";
 export { default as noDuplicatedImports } from "./no-duplicated-imports.ts";
+export { default as noEscapedNewlinesInTemplateLiterals } from "./no-escaped-newlines-in-template-literals.ts";
 export { default as noHardcodedStringComparisons } from "./no-hardcoded-string-comparisons.ts";
+export { default as noJoinedStringLiterals } from "./no-joined-string-literals.ts";
 export { default as noMagicNumbers } from "./no-magic-numbers.ts";
 export { default as noMisnamedConstantObjects } from "./no-misnamed-constant-objects.ts";
 export { default as noSilentCatch } from "./no-silent-catch.ts";

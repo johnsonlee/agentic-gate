@@ -11,6 +11,7 @@ import type { SourceNode } from "./parser.ts";
 export interface SourceReference {
   specifier: string;
   node: SourceNode;
+  typeOnly: boolean;
 }
 
 export const ModuleIndexBaseName = "index";
@@ -27,6 +28,7 @@ const ignoredTraversalKeys = new Set([
   "range",
   "tokens"
 ]);
+const TYPE_REFERENCE_KIND = "type";
 function staticString(node: SourceNode | null | undefined): string | undefined {
   if (node?.type !== AstNodeTypes.LITERAL || !isJavaScriptString(node.value)) return undefined;
   return node.value;
@@ -50,6 +52,19 @@ function expressionSpecifier(node: SourceNode): string | undefined {
   return undefined;
 }
 
+function isTypeOnlyReference(node: SourceNode): boolean {
+  if (
+    node.importKind === TYPE_REFERENCE_KIND ||
+    node.exportKind === TYPE_REFERENCE_KIND
+  ) return true;
+  return Array.isArray(node.specifiers) &&
+    node.specifiers.length > 0 &&
+    node.specifiers.every((specifier: SourceNode) =>
+      specifier.importKind === TYPE_REFERENCE_KIND ||
+      specifier.exportKind === TYPE_REFERENCE_KIND
+    );
+}
+
 /** Collects static imports, re-exports, dynamic imports, and TS import-equals. */
 export function collectSourceReferences(program: SourceNode): SourceReference[] {
   const references: SourceReference[] = [];
@@ -63,7 +78,13 @@ export function collectSourceReferences(program: SourceNode): SourceReference[] 
 
     const node = value as SourceNode;
     const specifier = declarationSpecifier(node) ?? expressionSpecifier(node);
-    if (specifier !== undefined) references.push({ specifier, node: node.source ?? node });
+    if (specifier !== undefined) {
+      references.push({
+        specifier,
+        node: node.source ?? node,
+        typeOnly: isTypeOnlyReference(node)
+      });
+    }
     for (const [key, child] of Object.entries(node)) {
       if (!ignoredTraversalKeys.has(key)) visit(child);
     }

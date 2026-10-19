@@ -6,3 +6,4 @@ export const WORD_TWO = `Identifier${B_VALUE}`;
 export const PUNCTUATION_TWO = `${WORD_TWO}:`;
 export const QUERY_TWO = String.raw`select ${B_VALUE} from records`;
 export const ESCAPED_TWO = `cafe-${B_VALUE}`;
+export const TAGGED_TWO = tag`tagged fragment`;

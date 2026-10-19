@@ -13,8 +13,6 @@
  * responsibility and a public interface. Every production source file belongs
  * to its nearest owning `package.json`, is reachable from that package's public
  * entries, and stays hidden unless the package exposes it through `exports`.
- * A package that only forwards or re-exports another package is not a useful
- * layer.
  *
  * The gate derives layers from workspace manifests. It does not accept a
  * separately configured numeric layer list. The resulting package graph is a
@@ -33,9 +31,9 @@
  * - adding the edge keeps the workspace package graph acyclic.
  *
  * `dependencies`, `optionalDependencies`, and `peerDependencies` create
- * architecture edges. `devDependencies` still satisfies the declaration check
- * for development and test imports, but it does not order production layers and
- * cannot create an architecture cycle.
+ * architecture edges and satisfy runtime source-import declarations.
+ * `devDependencies` are build-time declarations: they may authorize type-only
+ * imports, but never runtime source imports or production layer edges.
  *
  * The caller-to-callee dependency direction defines upper-to-lower layering.
  * Topological rank is an observation of the complete graph, not a configured
@@ -256,9 +254,20 @@ export async function loadWorkspaceGraph(cwd: string): Promise<WorkspaceGraph> {
       manifest: await readManifest(manifestFile)
     }))
   );
-  const projects = manifests
-    .filter(({ manifest }) => manifest.name !== undefined)
-    .map(({ manifestFile, manifest }) => ({
+  const unnamed = manifests.filter(({ manifest }) => manifest.name === undefined);
+  if (unnamed.length > 0) {
+    throw new Error(
+      `Every workspace project must declare a package name: ${unnamed.map(({ manifestFile }) => manifestFile).join(", ")}`
+    );
+  }
+  const names = manifests.map(({ manifest }) => manifest.name!);
+  const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index);
+  if (duplicateNames.length > 0) {
+    throw new Error(
+      `Workspace package names must be unique: ${[...new Set(duplicateNames)].join(", ")}`
+    );
+  }
+  const projects = manifests.map(({ manifestFile, manifest }) => ({
       name: manifest.name!,
       directory: dirname(manifestFile),
       manifestFile,

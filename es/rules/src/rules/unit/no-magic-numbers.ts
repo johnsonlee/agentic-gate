@@ -4,8 +4,7 @@
  *
  * A number is named when the AST places it directly in a `const` initializer,
  * a statically named object field, an enum member, a readonly field, or a JSX
- * attribute. A computed member access names the number's index role. TypeScript
- * literal types do not execute and are outside the rule.
+ * attribute. TypeScript literal types do not execute and are outside the rule.
  *
  * The values `-1`, `0`, and `1` are structural values rather than magic
  * numbers. Their meaning is fixed by the surrounding operation, so the rule
@@ -131,12 +130,6 @@ function isNamedPropertyValue(parent: Node | undefined, current: Node): boolean 
     staticPropertyName(parent) !== undefined;
 }
 
-function isComputedMemberKey(parent: Node | undefined, current: Node): boolean {
-  return parent?.type === AstNodeTypes.MEMBER_EXPRESSION &&
-    parent.computed &&
-    parent.property === current;
-}
-
 function isJsxAttributeValue(context: NumericContext): boolean {
   if (
     context.parent?.type !== AstNodeTypes.JSX_EXPRESSION_CONTAINER ||
@@ -157,7 +150,6 @@ function isAllowedContext(context: NumericContext): boolean {
   if (isTypeLiteral(parent, current)) return true;
   if (isConstInitializer(context)) return true;
   if (isNamedPropertyValue(parent, current)) return true;
-  if (isComputedMemberKey(parent, current)) return true;
   if (isJsxAttributeValue(context)) return true;
   if (isEnumMember(parent, current)) return true;
   if (isReadonlyField(parent, current)) return true;
@@ -183,10 +175,11 @@ export default defineRule<NoMagicNumbersRule>(import.meta.url, {
 
         const ancestors = sourceCode.getAncestors(node) as Node[];
         const numeric = numericContext(node as Node, ancestors);
-        if (
-          numeric.numericValue !== undefined &&
-          StructuralNumbers.has(numeric.numericValue)
-        ) return;
+        const structuralValue = numeric.numericValue ??
+          (typeof (node as Node).bigint === JavaScriptValueTypes.STRING
+            ? Number((node as Node).bigint)
+            : undefined);
+        if (structuralValue !== undefined && StructuralNumbers.has(structuralValue)) return;
         if (isAllowedContext(numeric)) return;
 
         context.report({

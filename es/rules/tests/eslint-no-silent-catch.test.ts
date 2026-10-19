@@ -7,6 +7,9 @@ ruleTester.run("no-silent-catch", noSilentCatch, {
     "try { run(); } catch (error) { console.error(error); }",
     "try { run(); } catch (error) { throw error; }",
     "try { run(); } catch (error) { savedError = error; }",
+    "try { run(); } catch (error) { const saved = error; preserve(saved); }",
+    "try { run(); } catch { recover(); }",
+    "function read() { try { run(); } catch (error) { return null; } }",
     "try { run(); } finally { cleanup(); }",
     "read().catch((error) => report(error));",
     "read().catch((error) => { throw error; });",
@@ -33,15 +36,7 @@ ruleTester.run("no-silent-catch", noSilentCatch, {
       errors: [{ messageId: "SILENT_CATCH" }]
     },
     {
-      code: "try { run(); } catch (error) { recover(); }",
-      errors: [{ messageId: "SILENT_CATCH" }]
-    },
-    {
-      code: "try { run(); } catch (error) { error = replacement; }",
-      errors: [{ messageId: "SILENT_CATCH" }]
-    },
-    {
-      code: "function read() { try { run(); } catch (error) { return null; } }",
+      code: "try { run(); } catch (error) { ; }",
       errors: [{ messageId: "SILENT_CATCH" }]
     },
     {

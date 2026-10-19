@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "jvm-gradle",
   "title": "JVM Gradle Plugin",
-  "description": "Compile lifecycle integration that composes JVM rules and the gate engine.",
+  "description": "Gradle composition root for JVM rules, engine execution, and post-compilation gating.",
   "generator": "dokka",
   "output": "build/dokka/html"
 }

@@ -3,10 +3,10 @@ plugins {
     alias(libs.plugins.sonatype.publish)
 }
 
-description = "Android Lint-based JVM lint engine for Agentic Gate"
+description = "JVM code quality engine for Agentic Gate"
 
 dependencies {
-    api(libs.android.lint.api)
+    implementation(libs.android.lint.api)
     implementation(libs.android.lint)
 
     testImplementation(kotlin("test"))

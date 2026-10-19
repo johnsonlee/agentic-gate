@@ -1,6 +1,6 @@
 /**
  * Reports `const` object literals asserted with `as const` unless the object
- * name starts with an uppercase letter and every static field uses
+ * name uses PascalCase and every static field uses
  * `UPPER_SNAKE_CASE`.
  *
  * Ordinary object bindings and objects asserted as another TypeScript type are
@@ -27,7 +27,7 @@ type Node = { type: string; [key: string]: any };
 
 const Messages = {
   CONSTANT_OBJECT_NAME:
-    "Constant object '{{name}}' must start with an uppercase letter.",
+    "Constant object '{{name}}' must use PascalCase.",
   CONSTANT_FIELD_NAME:
     "Constant object field '{{name}}' must use UPPER_SNAKE_CASE."
 } as const;
@@ -37,7 +37,7 @@ type NoMisnamedConstantObjectsRule = {
   MessageIds: keyof typeof Messages;
 };
 
-const UPPERCASE_INITIAL = /^[A-Z]/u;
+const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/u;
 const UPPER_SNAKE_CASE = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/u;
 
 /** @hidden */
@@ -62,7 +62,7 @@ export default defineRule<NoMisnamedConstantObjectsRule>(import.meta.url, {
           !object
         ) return;
 
-        if (!UPPERCASE_INITIAL.test(node.id.name)) {
+        if (!PASCAL_CASE.test(node.id.name)) {
           context.report({
             node: node.id,
             messageId: "CONSTANT_OBJECT_NAME",
