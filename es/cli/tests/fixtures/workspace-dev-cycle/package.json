@@ -1,0 +1,7 @@
+{
+  "name": "workspace-dev-cycle-fixture",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}

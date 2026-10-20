@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["gate.config.ts", "eslint.config.mjs"],
+      "project": ["tooling/**/*.ts"]
+    },
+    "es/engine": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "es/rules": {
+      "entry": ["src/index.ts", "tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts", "!tests/fixtures/**"]
+    },
+    "es/cli": {
+      "entry": ["src/index.ts", "src/cli.ts", "tests/**/*.test.ts", "smoke/**/*.mjs"],
+      "project": ["src/**/*.ts", "tests/**/*.ts", "!tests/fixtures/**"]
+    },
+    "examples/es": {
+      "entry": ["src/index.ts", "gate.config.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  },
+  "ignoreExportsUsedInFile": true
+}

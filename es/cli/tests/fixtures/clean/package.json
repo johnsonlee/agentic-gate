@@ -1,0 +1,6 @@
+{
+  "name": "agentic-gate-clean-fixture",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts"
+}

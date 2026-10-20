@@ -1,0 +1,51 @@
+{
+  "name": "agentic-gate-rules",
+  "version": "0.1.0",
+  "description": "Non-negotiable JavaScript and TypeScript policies for Agentic Gate.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnsonlee/agentic-gate.git",
+    "directory": "es/rules"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "scripts": {
+    "clean": "bun -e \"import { rm } from 'node:fs/promises'; await rm('dist', { recursive: true, force: true })\"",
+    "build": "bun run clean && bun --bun tsc --project tsconfig.build.json",
+    "typecheck": "bun --bun tsc --project tsconfig.json --noEmit",
+    "test": "bun test",
+    "check": "bun run typecheck && bun run test && bun run build",
+    "prepack": "bun run check"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "8.71.2",
+    "agentic-gate-engine": "workspace:*",
+    "eslint": "10.13.0",
+    "eslint-plugin-unicorn": "78.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "@typescript-eslint/parser": "8.71.2",
+    "typescript": "~6.0.3"
+  }
+}

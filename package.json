@@ -1,0 +1,36 @@
+{
+  "name": "agentic-gate",
+  "private": true,
+  "packageManager": "bun@1.3.11",
+  "workspaces": [
+    "es/engine",
+    "es/rules",
+    "es/cli",
+    "examples/es"
+  ],
+  "scripts": {
+    "build": "bun --filter 'agentic-gate-engine' build && bun --filter 'agentic-gate-rules' build && bun --filter 'agentic-gate-cli' build",
+    "typecheck": "bun --filter 'agentic-gate-engine' typecheck && bun --filter 'agentic-gate-rules' typecheck && bun --filter 'agentic-gate-cli' typecheck",
+    "test": "bun --filter 'agentic-gate-rules' test && bun --filter 'agentic-gate-cli' test",
+    "gate:self": "./es/cli/dist/agentic-gate-cli --cwd .",
+    "docs:es": "typedoc --options typedoc.json",
+    "docs:jvm": "./gradlew :jvm:engine:dokkaHtml :jvm:rules:dokkaHtml :jvm:gradle:dokkaHtml --no-daemon",
+    "docs:assemble": "bun ./tooling/docs.ts",
+    "docs": "bun run docs:es && bun run docs:jvm && bun run docs:assemble",
+    "check:jvm": "./gradlew check publishToMavenLocal --no-daemon",
+    "check": "bun --filter 'agentic-gate-engine' check && bun --filter 'agentic-gate-rules' check && bun --filter 'agentic-gate-cli' check && bun install --frozen-lockfile && bun run gate:self && bun run check:jvm && bun run docs",
+    "check:unused": "knip --include files,exports,types,nsExports,nsTypes",
+    "example:es": "bun --filter 'agentic-gate-es-example' check",
+    "example:java": "./gradlew -p examples/java compileJava --no-daemon",
+    "example:android": "ANDROID_HOME=${ANDROID_HOME:-$HOME/Library/Android/sdk} ./gradlew -p examples/android assembleDebug --no-daemon",
+    "ci": "bun run check && bun run check:unused && bun run example:es && bun run example:java && bun run example:android"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "agentic-gate-cli": "workspace:*",
+    "knip": "6.41.0",
+    "semver": "7.7.3",
+    "typedoc": "0.28.20",
+    "typescript": "~6.0.3"
+  }
+}

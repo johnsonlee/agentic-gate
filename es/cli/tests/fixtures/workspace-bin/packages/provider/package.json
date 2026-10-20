@@ -1,0 +1,7 @@
+{
+  "name": "fixture-bin-provider",
+  "private": true,
+  "bin": {
+    "fixture-command": "./dist/fixture-command"
+  }
+}

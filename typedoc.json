@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Agentic Gate — ES",
+  "entryPoints": ["es/engine/src", "es/rules/src", "es/cli/src"],
+  "entryPointStrategy": "expand",
+  "tsconfig": "tsconfig.docs.json",
+  "out": "es/rules/build/docs",
+  "readme": "es/rules/README.md",
+  "excludeNotDocumented": true,
+  "searchInComments": true,
+  "treatWarningsAsErrors": true,
+  "validation": {
+    "notExported": false
+  }
+}

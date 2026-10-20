@@ -1,0 +1,1 @@
+export { CHILD } from "./child";

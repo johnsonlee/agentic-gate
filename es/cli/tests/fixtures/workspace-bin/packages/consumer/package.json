@@ -1,0 +1,10 @@
+{
+  "name": "fixture-bin-consumer",
+  "private": true,
+  "scripts": {
+    "check": "fixture-command"
+  },
+  "devDependencies": {
+    "fixture-bin-provider": "workspace:*"
+  }
+}

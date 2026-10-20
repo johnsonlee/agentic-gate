@@ -1,0 +1,8 @@
+{
+  "extends": "./es/rules/tsconfig.json",
+  "include": [
+    "es/engine/src/**/*.ts",
+    "es/rules/src/**/*.ts",
+    "es/cli/src/**/*.ts"
+  ]
+}
